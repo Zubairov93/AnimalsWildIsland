@@ -1,5 +1,9 @@
 package organisms;
 
+import javax.security.auth.login.Configuration;
+import java.security.Policy;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class Animal {
@@ -29,8 +33,14 @@ public abstract class Animal {
         return this.foodForSaturation - this.currentSaturation < 1.0;
     }
     public void  toSaturate(Animal otherAnimal) {
+
         this.currentSaturation += otherAnimal.getWeight();
         otherAnimal.setAnimalisDead(true);
+        System.out.println( " Текущее животное: " + this.id + " съел жертву: " + otherAnimal.id);
+    }
+
+    public double getCurrentSaturation() {
+        return currentSaturation;
     }
 
     public void toSaturate(Plant plant) {
@@ -62,9 +72,22 @@ public abstract class Animal {
         }
         return  directionEnum;
     }
+    public int stepCount() {
+        int speedMoveToCell = this.speedMoveToCell;
+        int maxRandomCellPerMoveSpeedNoMoreForAllAnimal = ThreadLocalRandom.current().nextInt(0, 5);
+        if (maxRandomCellPerMoveSpeedNoMoreForAllAnimal <= speedMoveToCell)
+            return maxRandomCellPerMoveSpeedNoMoreForAllAnimal;
+        return 0;
+    }
 
-
-
+    public Animal(int id, double weight, int maxCountInCell, int speedMoveToCell, double foodForSaturation) {
+        this.id = id;
+        this.weight = weight;
+        this.maxCountInCell = maxCountInCell;
+        this.speedMoveToCell = speedMoveToCell;
+        this.foodForSaturation = foodForSaturation;
+        this.currentSaturation = 0;
+    }
 
     public Animal(int id, double weight, int maxCountInCell, int speedMoveToCell, double foodForSaturation,double currentSaturation) {
         this.id = id;
@@ -72,19 +95,64 @@ public abstract class Animal {
         this.maxCountInCell = maxCountInCell;
         this.speedMoveToCell = speedMoveToCell;
         this.foodForSaturation = foodForSaturation;
-        this.currentSaturation = currentSaturation;
+        this.currentSaturation = 0;
     }
 
     public String getSimpleNameClassName() {
         return this.getClass().getSimpleName();
     }
 
+    //метод кушать животных животными
+    public void eat(Animal anotherAnimal){
+       // System.out.println( " Текущее животное: " + this.id + " жертва: " + anotherAnimal.id);
+        if(anotherAnimal == null) return;
+        if(this.equals(anotherAnimal)) return;
+        if(this.canBeEaten(anotherAnimal) && !this.isSaturation()) {
+        this.toSaturate(anotherAnimal);
+        }
+    }
+    // метод кушать растения животными
+    public void eat(CopyOnWriteArrayList<Plant> plants) {
+        if(plants != null && this instanceof Herbivore && plants.size()> 0) {
+            this.toSaturate(plants.get(0));
+            plants.remove(0);
+        }
+    }
 
-    public void move() {
+        // метод быть съеденным
+    private boolean canBeEaten(Animal anotherAnimal){
+        int probability = Utils.probability[this.getId()][anotherAnimal.getId()];
+        int factProbability = ThreadLocalRandom.current().nextInt(0,100);
+        return probability > factProbability;
 
     }
+    //метод размножаться
+    public CopyOnWriteArrayList<Animal> multiply(Animal anotherAnimal) {
+        if (this.getId() == anotherAnimal.getId() && !this.equals(anotherAnimal)) {
+            CopyOnWriteArrayList<Animal> children = new CopyOnWriteArrayList<>();
+            AnimalFactory animalFactory = new AnimalFactory();
+            for (int i = 0; i < Utils.childQuanity.get(id); i++) {
+                children.add(animalFactory.createAnimal(this.getId()));
+                System.out.println("рождено: " + getId());
+            }
+            return children;
+
+        }
+        return null;
+    }
+
+    public int getId(){
+        return id;
+    };
+
+
 
     public double getWeight() {
         return weight;
+    }
+    //иконки
+    @Override
+    public String toString() {
+        return Utils.iconsOfAnimlsAndPlants.get(this.id);
     }
 }
